@@ -1,6 +1,6 @@
 from abc import ABC, ABCMeta, abstractmethod
 from inspect import signature
-from inputs import BaseInput
+from schematicGenerator.inputs import BaseInput
 from functools import wraps
 
 
