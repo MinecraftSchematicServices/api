@@ -16,114 +16,128 @@ MAIN_PID = os.getpid()
 known_generator_files = set()
 generators_dict = {}
 processed_files = set()
+LOAD = "load"
+UNLOAD = "unload"
+RELOAD = "reload"
+DELETE = "delete"
+MAIN_PID = os.getpid()
+
+generators_dict = {} 
+
+def get_module_name(file_path):
+    """Return the module name based on the file path."""
+    return "schematicGenerator.generators." + os.path.basename(file_path)[:-3]
+
+def is_valid_generator(obj):
+    """Check if the object is a valid generator."""
+    return inspect.isclass(obj) and issubclass(obj, BaseGenerator) and obj != BaseGenerator
+
+def load_module_members(module, loaded_generators=None):
+    """Load module members into the generators dictionary."""
+    if loaded_generators is None:
+        loaded_generators = []
+
+    for name, obj in inspect.getmembers(module):
+        if is_valid_generator(obj):
+            generators_dict[obj.__name__] = obj
+            loaded_generators.append(obj.__name__)
+
+    return loaded_generators
+
+def unload_module_members(module):
+    """Unload module members from the generators dictionary."""
+    for name, obj in inspect.getmembers(module):
+        if is_valid_generator(obj) and obj.__name__ in generators_dict:
+            del generators_dict[obj.__name__]
+
+def send_websocket_payload(action_type):
+    """Send payload via websocket."""
+    websocket_payload = {
+        "type": action_type,
+        "generators": list(generators_dict.keys())
+    }
+    queue.put(json.dumps(websocket_payload))
 
 def load_generator(file_path):
-    loaded_generators = []
-    module_name = "schematicGenerator.generators." + os.path.basename(file_path)[:-3]
+    """Load or reload a generator module."""
+    module_name = get_module_name(file_path)
     current_pid = os.getpid()
+    loaded_generators = []
+
     try:
         if module_name in sys.modules:
             print(f"[PID: {current_pid}] Reloading {module_name}")
             module = reload(sys.modules[module_name])
+            action_type = RELOAD
         else:
             print(f"[PID: {current_pid}] Loading {module_name}")
             module = import_module(module_name)
-        for name, obj in inspect.getmembers(module):
-            if (
-                inspect.isclass(obj)
-                and issubclass(obj, BaseGenerator)
-                and obj != BaseGenerator
-            ):
-                generators_dict[obj.__name__] = obj
-                loaded_generators.append(obj.__name__)
+            action_type = LOAD
+
+        loaded_generators = load_module_members(module, loaded_generators=loaded_generators)
+        if current_pid == MAIN_PID:
+            send_websocket_payload(action_type)
     except Exception as e:
         print(f"Error loading {module_name}: {e}")
-        
-    if current_pid == MAIN_PID:
-        print("Main process")
-        websocket_payload ={
-            "type": "reload" if module_name in sys.modules else "load",
-            "generators": list(generators_dict.keys())
-        }
-        websocket_payload = json.dumps(websocket_payload)
-        queue.put(websocket_payload)
+        raise e
+    
+
     return loaded_generators
 
-
 def unload_generator(file_path):
-    module_name = "schematicGenerator.generators." + os.path.basename(file_path)[:-3]
+    """Unload a generator module."""
+    module_name = get_module_name(file_path)
     current_pid = os.getpid()
     print(f"[PID: {current_pid}] Unloading {module_name}")
+
     if module_name in sys.modules:
         module = sys.modules[module_name]
-        for name, obj in inspect.getmembers(module):
-            if (
-                inspect.isclass(obj)
-                and issubclass(obj, BaseGenerator)
-                and obj != BaseGenerator
-            ):
-                if obj.__name__ in generators_dict:
-                    del generators_dict[obj.__name__]
+        unload_module_members(module)
         del sys.modules[module_name]
+
     if current_pid == MAIN_PID:
-        print("Main process")
-        websocket_payload ={
-            "type": "delete",
-            "generators": [k for k in generators_dict.keys()]
-        }
-        websocket_payload = json.dumps(websocket_payload)
-        queue.put(websocket_payload)
-    
+        send_websocket_payload(DELETE)
+
 class FileChangeHandler(FileSystemEventHandler):
+    
+    @staticmethod
+    def remove_files(files_to_remove):
+        """Remove files from the known_generator_files and unload them."""
+        for file in files_to_remove:
+            print(f"Deleted file: {file} among {known_generator_files}")
+            unload_generator(file)
+            known_generator_files.remove(file)
+
     def on_modified(self, event):
         print("Modified")
         global known_generator_files
+        current_files = set(glob.glob("./schematicGenerator/generators/*.py"))
+        
         if event.is_directory and event.src_path.endswith("/generators"):
-            current_files = set(glob.glob("./schematicGenerator/generators/*.py"))
-            # for known_file in list(known_generator_files):
-            #     if known_file not in current_files :
-            #         print(f"Deleted file: {known_file} among {current_files}")
-            #         unload_generator(known_file)
-            #         known_generator_files.remove(known_file)
             
-            # remove any files that are not in current_files
-            files_to_remove = []
-            for known_file in known_generator_files:
-                if known_file not in current_files:
-                    files_to_remove.append(known_file)
-            for file in files_to_remove:
-                # check if still in known files, because it might have been removed by on_deleted
-                if file in known_generator_files:
-                    print(f"Deleted file: {file} among {known_generator_files}")
-                    unload_generator(file)
-                    known_generator_files.remove(file)
+            files_to_remove = [known_file for known_file in known_generator_files if known_file not in current_files]
+            self.remove_files(files_to_remove)
+            
             for file in current_files:
                 if file not in known_generator_files:
                     print(f"New file: {file} among {known_generator_files}")
                     load_generator(file)
                     known_generator_files.add(file)
-        elif not event.is_directory and event.src_path.endswith(".py") and event.src_path :
-            print(f"Modified file: {event.src_path} among {known_generator_files}")
-            load_generator(event.src_path)
-            known_generator_files.add(event.src_path)
-
-        
+                    
+        elif not event.is_directory and event.src_path.endswith(".py"):
+            file_path = "./" + os.path.relpath(event.src_path)
+            if file_path not in current_files:
+                print(f"Deleted file: {file_path} among {known_generator_files}")
+                self.remove_files([file_path])
+                return
+            print(f"Modified file: {file_path} among {known_generator_files}")
+            load_generator(file_path)
+            known_generator_files.add(file_path)
 
     def on_deleted(self, event):
-        # global known_generator_files
-        # print("Delete")
-        # if not event.is_directory and event.src_path.endswith(".py"):
-        #     unload_generator(event.src_path)
-        #     known_generator_files.remove(event.src_path)
-        files_to_remove = []
-        for known_file in known_generator_files:
-            if not os.path.exists(known_file):
-                files_to_remove.append(known_file)
-        for file in files_to_remove:
-            if file in known_generator_files:
-                print(f"Deleted file: {file} among {known_generator_files}")
-                unload_generator(file)
-                known_generator_files.remove(file)
+        files_to_remove = [known_file for known_file in known_generator_files if not os.path.exists(known_file)]
+        self.remove_files(files_to_remove)
+
             
 observer = None
 
