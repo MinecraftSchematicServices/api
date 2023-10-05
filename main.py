@@ -2,9 +2,10 @@ from sanic import Sanic
 from server.routes import list_generators, generate
 from server.websocket_routes import feed
 from hotloading.hotload_manager import init_observer, stop_observer, initialize_generators
+from sanic_ext import Extend
 
 app = Sanic(name="GeneratorsAPI")
-
+app.config.CORS_ORIGINS = "*"
 # Attach routes
 app.add_route(list_generators, "/generators")
 app.add_route(generate, "/generate/<generator_name>", methods=["POST"])

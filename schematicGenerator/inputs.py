@@ -6,7 +6,7 @@ class BaseInput:
         self.description = description
 
     def validate(self, value):
-        raise NotImplementedError
+        return value
 
     def to_dict(self):
         data = {k: v for k, v in vars(self).items() if v is not None}
@@ -56,7 +56,29 @@ class  SetInput(BaseInput):
     
 
 class BlockInput(BaseInput):
-    pass
+    # a block is a string that is prefixed with minecraft: and has a block name after it
+    # for example: minecraft:stone
+    def __init__(self, palette=None, **kwargs):
+        super().__init__(**kwargs)
+        self.palette = palette
+        
+    def validate(self, value):
+        if not isinstance(value, str):
+            raise ValueError(f"Expected a string, got {type(value).__name__}")
+        if not value.startswith("minecraft:"):
+            raise ValueError(f"Expected a block, got {value}")
+        if self.palette is not None and value not in self.palette:
+            raise ValueError(f"Value '{value}' is not allowed. Allowed values are: {', '.join(self.palette)}")
+
+        return value
+    
+    def to_dict(self):
+        data = super().to_dict()
+        data.update({
+            "palette": self.palette
+        })
+        return data
+    
 
 class StringInput(BaseInput):
     def __init__(self, min_length=None, max_length=None, allowed_values=None, **kwargs):

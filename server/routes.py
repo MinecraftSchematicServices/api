@@ -2,9 +2,10 @@ from sanic import response
 from .websocket_routes import queue
 from hotloading.hotload_manager import generators_dict
 import mcschematic
+import traceback
 
 async def list_generators(request):
-    generators = [{k: v.to_dict()} for k, v in generators_dict.items()]
+    generators = {k: v.to_dict() for k, v in generators_dict.items()}
     return response.json(generators)
 
 async def generate(request, generator_name):
@@ -30,4 +31,6 @@ async def generate(request, generator_name):
             mime_type="application/octet-stream",
         )
     except Exception as e:
+        print(e)
+        print(traceback.format_exc())
         return response.json({"error": str(e)}, status=400)

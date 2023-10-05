@@ -8,7 +8,7 @@ class SquareGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
         description="Generates a square of a given side length and block",
         author="Sloimy   ",
-        categories=["shapes"],
+        category="Shape",
     )
     @classmethod
     def generate(

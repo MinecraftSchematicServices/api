@@ -8,17 +8,17 @@ class PolygonGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
         description="Generates a regular polygon with a given number of sides and radius",
         author="ChatGPT",
-        categories=["shapes"],
+        category="Shape",
     )
 
     @classmethod
     def generate(
         cls,
         sides: int = IntInput(
-            min_value=3, max_value=12, description="Number of sides of the polygon"
+            min_value=3, max_value=12, description="Number of sides of the polygon", default=7
         ),
         radius: int = IntInput(
-            min_value=1, max_value=128, description="The radius of the polygon"
+            min_value=1, max_value=128, description="The radius of the polygon", default=5
         ),
         filled: bool = BoolInput(
             default=True, description="Whether the polygon should be filled or not"

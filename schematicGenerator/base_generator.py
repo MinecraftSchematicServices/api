@@ -42,12 +42,12 @@ class MetaGenerator(ABCMeta):
         return super().__new__(cls, name, bases, class_dict)
     
 class GeneratorMetaData:
-    def __init__(self, description=None, author=None, socials=None, tags=[], categories=[]):
+    def __init__(self, description=None, author=None, socials=None, tags=[], category=None):
         self.description = description
         self.author = author
         self.socials = socials or {}
         self.tags = tags
-        self.categories = categories
+        self.category = category
     def to_dict(self):
         dict_data = {}
         if self.description:
@@ -58,8 +58,8 @@ class GeneratorMetaData:
             dict_data["socials"] = self.socials
         if self.tags:
             dict_data["tags"] = self.tags
-        if self.categories:
-            dict_data["categories"] = self.categories
+        if self.category:
+            dict_data["category"] = self.category
         return dict_data
 
 class BaseGenerator(ABC, metaclass=MetaGenerator):
@@ -86,6 +86,7 @@ class BaseGenerator(ABC, metaclass=MetaGenerator):
     @classmethod
     def to_dict(cls):
         serialized_data = {
+            "name": cls.__name__,
             "meta_data": cls.meta_data.to_dict(),
             "inputs": cls.serialize_inputs()
         }
