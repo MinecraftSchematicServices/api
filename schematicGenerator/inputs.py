@@ -54,6 +54,34 @@ class  SetInput(BaseInput):
         })
         return data
     
+class ComplexInput(BaseInput):
+    def __init__(self, real_default=0.0, imag_default=0.0, real_low_bound=-float("inf"), real_high_bound=float("inf"), imag_low_bound=-float("inf"), imag_high_bound=float("inf"), **kwargs):
+        super().__init__(**kwargs)
+        self.real_default = real_default
+        self.imag_default = imag_default
+        self.real_low_bound = real_low_bound
+        self.real_high_bound = real_high_bound
+        self.imag_low_bound = imag_low_bound
+        self.imag_high_bound = imag_high_bound
+        
+
+
+    def validate(self, value):
+        if not isinstance(value, (tuple, list)) or len(value) != 2:
+            raise ValueError("Expected a tuple or list with two elements for a complex number")
+        real, imag = value
+        if not isinstance(real, (int, float)) or not isinstance(imag, (int, float)):
+            raise ValueError("Both real and imaginary parts should be numbers")
+        return complex(real, imag)
+
+    def to_dict(self):
+        data = super().to_dict()
+        data.update({
+            "real_default": self.real_default,
+            "imag_default": self.imag_default
+        })
+        return data
+    
 
 class BlockInput(BaseInput):
     # a block is a string that is prefixed with minecraft: and has a block name after it
