@@ -10,6 +10,7 @@ from schematicGenerator.inputs import (
 from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
 import mcschematic
 import numpy as np
+from schematicGenerator.block_palettes import *
 
 
 class JuliaSetGenerator(BaseGenerator):
@@ -42,45 +43,11 @@ class JuliaSetGenerator(BaseGenerator):
             min_value=1, max_value=2000, description="Height of the image", default=100
         ),
         blocks: list = ArrayInput(
-            default=[
-                "minecraft:white_wool",
-                "minecraft:orange_wool",
-                "minecraft:magenta_wool",
-                "minecraft:light_blue_wool",
-                "minecraft:yellow_wool",
-                "minecraft:lime_wool",
-                "minecraft:pink_wool",
-                "minecraft:gray_wool",
-                "minecraft:light_gray_wool",
-                "minecraft:cyan_wool",
-                "minecraft:purple_wool",
-                "minecraft:blue_wool",
-                "minecraft:brown_wool",
-                "minecraft:green_wool",
-                "minecraft:red_wool",
-                "minecraft:black_wool",
-            ],
+            default=colored_wool_palette,
             description="Blocks (wool colors) to use for the image",
             element_type=BlockInput(
                 description="Block",
-                palette=[
-                    "minecraft:white_wool",
-                    "minecraft:orange_wool",
-                    "minecraft:magenta_wool",
-                    "minecraft:light_blue_wool",
-                    "minecraft:yellow_wool",
-                    "minecraft:lime_wool",
-                    "minecraft:pink_wool",
-                    "minecraft:gray_wool",
-                    "minecraft:light_gray_wool",
-                    "minecraft:cyan_wool",
-                    "minecraft:purple_wool",
-                    "minecraft:blue_wool",
-                    "minecraft:brown_wool",
-                    "minecraft:green_wool",
-                    "minecraft:red_wool",
-                    "minecraft:black_wool",
-                ],
+                palette=colored_solid_blocks
             ),
             min_length=2,
             max_length=16,

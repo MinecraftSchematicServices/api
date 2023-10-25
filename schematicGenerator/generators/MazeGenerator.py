@@ -1,75 +1,99 @@
 import random
 from schematicGenerator.inputs import IntInput, BoolInput, BlockInput
 from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
+from schematicGenerator.block_palettes import *
+from schematicGenerator.utils import *
 import mcschematic
+
 
 class MazeGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
-        description="Generates a maze of a given width and height",
+        description="Generates a 2D maze with 2x2 cells, ensuring no diagonal walls",
         author="ChatGPT",
-        category="Maze",
+        category="Structure",
     )
+
+    DIRECTIONS = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    CELL_SIZE = 2
 
     @classmethod
     def generate(
         cls,
         width: int = IntInput(
-            min_value=5, max_value=128, description="Width of the maze", default=15
+            min_value=3, max_value=64, description="Width of the maze in cells", default=7
         ),
         height: int = IntInput(
-            min_value=5, max_value=128, description="Height of the maze", default=15
+            min_value=3, max_value=64, description="Height of the maze in cells", default=7
         ),
-        block: list = BlockInput(
-            default="minecraft:stone_bricks",
-            description="The block to use for the maze walls",
+        wall_block: str = BlockInput(
+            default='minecraft:black_concrete', description="Block type for the maze walls", palette=colored_solid_blocks
         ),
+        path_block: str = BlockInput(
+            default='minecraft:white_concrete', description="Block type for the maze path", palette=colored_solid_blocks
+        )
     ) -> mcschematic.MCSchematic:
-        schem = mcschematic.MCSchematic()
+        block_width = width * cls.CELL_SIZE + 1
+        block_height = height * cls.CELL_SIZE + 1
+        maze = mcschematic.MCSchematic()
+        
+        for x in range(block_width):
+            for z in range(block_height):
+                maze.setBlock((x, 0, z), path_block)
+        for x in range(block_width):
+            maze.setBlock(((x, 0, 0)), wall_block)
+            maze.setBlock((x, 0, block_height - 1), wall_block)
+        for z in range(block_height):
+            maze.setBlock((0, 0, z), wall_block)
+            maze.setBlock((block_width - 1, 0, z), wall_block)
 
-        # Initialize maze with all walls
-        for x in range(width):
-            for y in range(height):
-                schem.setBlock((x, y, 0), block)
+        for x in range(1, block_width - 1):
+            for z in range(1, block_height - 1):
+                if x % cls.CELL_SIZE == 0 or z % cls.CELL_SIZE == 0:
+                    maze.setBlock((x, 0, z), wall_block)    
 
-        # Stack for backtracking
-        stack = []
-        # Convert maze size to size in terms of cells
-        cell_width = (width - 1) // 2
-        cell_height = (height - 1) // 2
+        cells = [[0 for _ in range(height)] for _ in range(width)]
+        path = []
+        x, z = 0, 0
+        cells[x][z] = 1
+        path.append((x, z))
+        def is_valid_cell(x, z, width, height):
+            return x >= 0 and x < width and z >= 0 and z < height and cells[x][z] == 0
 
-        # Starting point
-        start_x, start_y = random.randint(0, cell_width - 1), random.randint(0, cell_height - 1)
-        stack.append((start_x, start_y))
+        def get_neighbors(x, z, width, height):
+            neighbors = []
+            for dx, dz in cls.DIRECTIONS:
+                print(x, z, dx, dz)
+                nx, nz = x + dx, z + dz
+                if is_valid_cell(nx, nz, width, height) and cells[nx][nz] == 0:
+                    neighbors.append((nx, nz))
+            return neighbors
 
-        # Directions
-        directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-        visited = [[False for _ in range(cell_height)] for _ in range(cell_width)]
-        visited[start_x][start_y] = True
-
-        # Carve out starting point
-        schem.setBlock((start_x * 2 + 1, start_y * 2 + 1, 0), "minecraft:air")
-
-        while stack:
-            x, y = stack[-1]
-            possible_directions = []
-
-            for dx, dy in directions:
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < cell_width and 0 <= ny < cell_height and not visited[nx][ny]:
-                    # Check if there are walls on both sides
-                    if (schem.getBlockStateAt((nx * 2 + 1 + dx, ny * 2 + 1 + dy, 0)) is not None) and \
-                       (schem.getBlockStateAt((nx * 2 + 1 - dx, ny * 2 + 1 - dy, 0)) is not None):
-                        possible_directions.append((dx, dy))
-
-            if possible_directions:
-                dx, dy = random.choice(possible_directions)
-                nx, ny = x + dx, y + dy
-                visited[nx][ny] = True
-                # Carve through walls to next cell
-                schem.setBlock((x * 2 + 1 + dx, y * 2 + 1 + dy, 0), None)
-                schem.setBlock((nx * 2 + 1, ny * 2 + 1, 0), None)
-                stack.append((nx, ny))
+        def get_wall_between_cells(x1, z1, x2, z2, cell_size):
+            if x2 == x1 + 1:
+                return ((x1 + 1) * cell_size, 0, z1 * cell_size + 1)
+            elif x2 == x1 - 1:
+                return ((x1) * cell_size, 0, z1 * cell_size + 1)
+            elif z2 == z1 + 1:
+                return (x1 * cell_size + 1, 0, (z1 + 1) * cell_size)
+            elif z2 == z1 - 1:
+                return (x1 * cell_size + 1, 0, z1 * cell_size)
             else:
-                stack.pop()  # Backtrack
+                raise ValueError("Cells are not adjacent")
+            
+        while path:
+            if not path:
+                break
+            x, z = path[-1]
+            neighbors = get_neighbors(x, z, width, height)
+            if neighbors:
+                nx, nz = random.choice(neighbors)
+                maze.setBlock(get_wall_between_cells(x, z, nx, nz, cls.CELL_SIZE), path_block)
+                cells[nx][nz] = 1
+                path.append((nx, nz))
+            else:
+                path.pop()
 
-        return schem
+        
+                
+
+        return maze

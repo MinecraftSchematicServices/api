@@ -1,10 +1,11 @@
 import math
-from schematicGenerator.inputs import IntInput, BoolInput, BlockInput
+from schematicGenerator.inputs import IntInput, BoolInput, BlockInput, ArrayInput
 from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
 import mcschematic
-
-
+from schematicGenerator.block_palettes import *
+import random
 import math
+from schematicGenerator.utils import bresenham_line_2d
 
 class PolygonGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
@@ -17,25 +18,42 @@ class PolygonGenerator(BaseGenerator):
     def generate(
         cls,
         sides: int = IntInput(
-            min_value=3, max_value=12, description="Number of sides of the polygon", default=7
+            min_value=3, max_value=18, description="Number of sides of the polygon", default=5
         ),
         radius: int = IntInput(
-            min_value=1, max_value=128, description="The radius of the polygon", default=5
+            min_value=1, max_value=128, description="The radius of the polygon", default=20
         ),
         filled: bool = BoolInput(
-            default=True, description="Whether the polygon should be filled or not"
+            default=False, description="Whether the polygon should be filled or not"
         ),
-        block: list = BlockInput(
-            default="minecraft:white_concrete",
-            description="The block to use for the polygon",
+        inner_blocks: list = ArrayInput(
+            default=[],
+            description="The blocks to use for the inner part of the polygon",
+            element_type=BlockInput(
+                description="Block",
+                palette=colored_solid_blocks
+            ),
+            min_length=0,
+            max_length=16,
+        ),
+        border_blocks: list = ArrayInput(
+            default=['minecraft:white_concrete'],
+            description="The blocks to use for the border of the polygon",
+            element_type=BlockInput(
+                description="Block",
+                palette=colored_solid_blocks
+            ),
+            min_length=1,
+            max_length=16,
         ),
         height: int = IntInput(
             min_value=1, max_value=128, description="The height of the polygon", default=1
         ),
     ) -> mcschematic.MCSchematic:
         schem = mcschematic.MCSchematic()
+        if len(inner_blocks) == 0:
+            inner_blocks = border_blocks
 
-        # Calculate the vertices of the polygon
         vertices = [
             (
                 int(radius * math.cos(2 * math.pi * k / sides)),
@@ -51,16 +69,20 @@ class PolygonGenerator(BaseGenerator):
                 for x in range(-radius, radius + 1):
                     for z in range(-radius, radius + 1):
                         if is_point_inside_polygon((x, z), vertices):
-                            schem.setBlock((x + radius, i, z + radius), block)
-            else:
-                # Draw only the outline of the polygon
-                for k in range(sides):
-                    start_vertex = vertices[k]
-                    end_vertex = vertices[(k + 1) % sides]
-                    for point in bresenham_line(start_vertex, end_vertex):
-                        schem.setBlock((point[0] + radius, i, point[1] + radius), block)
+                            # Choose an inner block at random
+                            block_choice = random.choice(inner_blocks)
+                            schem.setBlock((x + radius, i, z + radius), block_choice)
+            
+            for k in range(sides):
+                start_vertex = vertices[k]
+                end_vertex = vertices[(k + 1) % sides]
+                for point in bresenham_line_2d(start_vertex, end_vertex):
+                    # Choose a border block at random
+                    block_choice = random.choice(border_blocks)
+                    schem.setBlock((point[0] + radius, i, point[1] + radius), block_choice)
 
         return schem
+
 
 def is_point_inside_polygon(point, vertices):
     # Use a point-in-polygon algorithm to determine if the point is inside the polygon
@@ -79,27 +101,4 @@ def is_point_inside_polygon(point, vertices):
 
     return odd_nodes
 
-def bresenham_line(start, end):
-    # Bresenham's line algorithm to generate points between two vertices
-    points = []
-    x0, y0 = start
-    x1, y1 = end
-    dx = abs(x1 - x0)
-    dy = abs(y1 - y0)
-    sx = 1 if x0 < x1 else -1
-    sy = 1 if y0 < y1 else -1
-    err = dx - dy
 
-    while True:
-        points.append((x0, y0))
-        if x0 == x1 and y0 == y1:
-            break
-        e2 = 2 * err
-        if e2 > -dy:
-            err -= dy
-            x0 += sx
-        if e2 < dx:
-            err += dx
-            y0 += sy
-
-    return points

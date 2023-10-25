@@ -4,6 +4,7 @@ import inspect
 import os
 import json
 import glob
+import traceback
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -77,8 +78,11 @@ def load_generator(file_path):
         if current_pid == MAIN_PID:
             send_websocket_payload(action_type)
     except Exception as e:
+        if module_name in sys.modules:
+            del sys.modules[module_name]
         print(f"Error loading {module_name}: {e}")
-        raise e
+        print(traceback.format_exc())
+        # raise e
     
 
     return loaded_generators
