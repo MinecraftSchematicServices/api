@@ -106,40 +106,30 @@ class BlockInput(BaseInput):
             "palette": self.palette
         })
         return data
-    
 
-class StringInput(BaseInput):
-    def __init__(self, min_length=None, max_length=None, allowed_values=None, **kwargs):
+# this input is used to select one of the values from a options list
+class SelectInput(BaseInput):
+    def __init__(self, options=None, **kwargs):
         super().__init__(**kwargs)
-        self.min_length = min_length
-        self.max_length = max_length
-        self.allowed_values = allowed_values
+        self.options = options
 
     def validate(self, value):
-        if not isinstance(value, str):
-            raise ValueError(f"Expected a string, got {type(value).__name__}")
-
-        if self.min_length is not None and len(value) < self.min_length:
-            raise ValueError(f"String is too short. Minimum length is {self.min_length}")
-
-        if self.max_length is not None and len(value) > self.max_length:
-            raise ValueError(f"String is too long. Maximum length is {self.max_length}")
-
-        if self.allowed_values is not None and value not in self.allowed_values:
-            raise ValueError(f"Value '{value}' is not allowed. Allowed values are: {', '.join(self.allowed_values)}")
+        if self.options is not None and value not in self.options:
+            raise ValueError(f"Value '{value}' is not allowed. Allowed values are: {', '.join(self.options)}")
 
         return value
 
     def to_dict(self):
         data = super().to_dict()
         data.update({
-            "min_length": self.min_length,
-            "max_length": self.max_length,
-            "allowed_values": self.allowed_values
+            "options": self.options
         })
         return data
+
     
-    
+
+
+
 class ArrayInput(BaseInput):
     def __init__(self, element_type, min_length=None, max_length=None, **kwargs):
         super().__init__(**kwargs)
@@ -177,6 +167,40 @@ class ArrayInput(BaseInput):
             "element_type": self.element_type.to_dict(),
             "min_length": self.min_length,
             "max_length": self.max_length
+        })
+        return data
+    
+class InputGroup(BaseInput):
+    def __init__(self, inputs: dict, **kwargs):
+        super().__init__(**kwargs)
+        if not all(isinstance(input_type, BaseInput) for input_type in inputs.values()):
+            raise TypeError("All values in inputs must be instances of BaseInput or its subclasses")
+        self.inputs = inputs
+
+    def validate(self, values):
+        if not isinstance(values, dict):
+            raise ValueError(f"Expected a list, got {type(values).__name__}")
+
+        if len(values) != len(self.inputs):
+            raise ValueError(f"Expected a list of length {len(self.inputs)}, got {len(values)}")
+
+        validated_values = {}
+        for key, input_type in self.inputs.items():
+            if key not in values:
+                if input_type.default is not None:
+                    validated_values[key] = input_type.default
+                else:
+                    raise ValueError(f"Missing required key: {key}")
+            else:
+                validated_value = input_type.validate(values[key])
+                validated_values[key] = validated_value
+    
+        return validated_values
+    
+    def to_dict(self):
+        data = super().to_dict()
+        data.update({
+            "inputs": {key: input_type.to_dict() for key, input_type in self.inputs.items()}
         })
         return data
 

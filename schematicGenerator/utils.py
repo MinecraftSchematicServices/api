@@ -7,6 +7,7 @@ def points_to_scheme(points, block):
         schem.setBlock(point, block)
     return schem
 
+
 def bresenham_line_2d(start: tuple, end: tuple) -> list:
     points = []
     x0, y0 = start
@@ -28,6 +29,68 @@ def bresenham_line_2d(start: tuple, end: tuple) -> list:
         if e2 < dx:
             err += dx
             y0 += sy
+    return points
+
+def bresenham_line_3d(start: tuple, end: tuple) -> list:
+    points = []
+    x0, y0, z0 = start
+    x1, y1, z1 = end
+
+    dx = abs(x1 - x0)
+    dy = abs(y1 - y0)
+    dz = abs(z1 - z0)
+
+    sx = 1 if x0 < x1 else -1
+    sy = 1 if y0 < y1 else -1
+    sz = 1 if z0 < z1 else -1
+
+    if dx >= dy and dx >= dz:
+        err1 = 2 * dy - dx
+        err2 = 2 * dz - dx
+        while x0 != x1:
+            points.append((x0, y0, z0))
+            if err1 > 0:
+                y0 += sy
+                err1 -= 2 * dx
+            if err2 > 0:
+                z0 += sz
+                err2 -= 2 * dx
+            err1 += 2 * dy
+            err2 += 2 * dz
+            x0 += sx
+
+    elif dy >= dx and dy >= dz:
+        err1 = 2 * dx - dy
+        err2 = 2 * dz - dy
+        while y0 != y1:
+            points.append((x0, y0, z0))
+            if err1 > 0:
+                x0 += sx
+                err1 -= 2 * dy
+            if err2 > 0:
+                z0 += sz
+                err2 -= 2 * dy
+            err1 += 2 * dx
+            err2 += 2 * dz
+            y0 += sy
+
+    else:
+        err1 = 2 * dy - dz
+        err2 = 2 * dx - dz
+        while z0 != z1:
+            points.append((x0, y0, z0))
+            if err1 > 0:
+                y0 += sy
+                err1 -= 2 * dz
+            if err2 > 0:
+                x0 += sx
+                err2 -= 2 * dz
+            err1 += 2 * dy
+            err2 += 2 * dx
+            z0 += sz
+
+    points.append((x0, y0, z0))
+
     return points
 
 

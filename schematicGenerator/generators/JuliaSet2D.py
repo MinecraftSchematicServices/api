@@ -3,7 +3,6 @@ from schematicGenerator.inputs import (
     IntInput,
     BoolInput,
     BlockInput,
-    StringInput,
     ComplexInput,
     ArrayInput,
 )

@@ -1,10 +1,9 @@
 import math
-from schematicGenerator.inputs import IntInput, BoolInput, BlockInput, StringInput
+from schematicGenerator.inputs import IntInput, BoolInput, BlockInput
 from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
 try:
     import mcschematic
     import numpy as np
-    print(np.zeros((3,3)))
 except Exception as e:
     print(e)
     pass
