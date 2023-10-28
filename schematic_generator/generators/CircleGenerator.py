@@ -1,6 +1,6 @@
 import math
-from schematicGenerator.inputs import IntInput, BoolInput, BlockInput
-from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
+from schematic_generator.inputs import IntInput, BoolInput, BlockInput
+from schematic_generator.base_generator import BaseGenerator, GeneratorMetaData
 import mcschematic
 
 

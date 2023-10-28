@@ -8,7 +8,7 @@ import traceback
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from schematicGenerator.base_generator import BaseGenerator
+from schematic_generator.base_generator import BaseGenerator
 from server.websocket_routes import queue
 
 
@@ -27,7 +27,7 @@ generators_dict = {}
 
 def get_module_name(file_path):
     """Return the module name based on the file path."""
-    return "schematicGenerator.generators." + os.path.basename(file_path)[:-3]
+    return "schematic_generator.generators." + os.path.relpath(file_path, "./schematic_generator/generators").replace("/", ".")[:-3]
 
 def is_valid_generator(obj):
     """Check if the object is a valid generator."""
@@ -114,9 +114,8 @@ class FileChangeHandler(FileSystemEventHandler):
     def on_modified(self, event):
         print("Modified")
         global known_generator_files
-        current_files = set(glob.glob("./schematicGenerator/generators/*.py"))
-        
-        if event.is_directory and event.src_path.endswith("/generators"):
+        current_files = set(glob.glob("./schematic_generator/generators/**/*.py", recursive=True))
+        if event.is_directory and "./schematic_generator/generators" in event.src_path:
             
             files_to_remove = [known_file for known_file in known_generator_files if known_file not in current_files]
             self.remove_files(files_to_remove)
@@ -147,7 +146,7 @@ observer = None
 async def init_observer(app, loop):
     global observer
     observer = Observer()
-    observer.schedule(FileChangeHandler(), path="./schematicGenerator/generators/", recursive=False)
+    observer.schedule(FileChangeHandler(), path="./schematic_generator/generators/", recursive=True)
     observer.start()
     print("Observer started")
 
@@ -159,7 +158,9 @@ async def stop_observer(app, loop):
         print("Observer stopped")
         
 def initialize_generators():
-    for file in glob.glob("./schematicGenerator/generators/*.py"):
+    # for file in glob.glob("./schematic_generator/generators/*.py"):
+    # recursively look under the generators directory for python files
+    for file in glob.glob("./schematic_generator/generators/**/*.py", recursive=True):
         known_generator_files.add(file)
         print("PID: ", os.getpid())
         load_generator(file)

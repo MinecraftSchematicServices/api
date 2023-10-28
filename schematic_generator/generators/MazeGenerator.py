@@ -1,9 +1,9 @@
 import random
 import math
-from schematicGenerator.inputs import IntInput, BoolInput, BlockInput, InputGroup, SelectInput
-from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
-from schematicGenerator.block_palettes import *
-from schematicGenerator.utils import *
+from schematic_generator.inputs import IntInput, BoolInput, BlockInput, InputGroup, SelectInput
+from schematic_generator.base_generator import BaseGenerator, GeneratorMetaData
+from schematic_generator.block_palettes import *
+from schematic_generator.utils import *
 import mcschematic
 
 class DisjointSet:
@@ -13,7 +13,7 @@ class DisjointSet:
 
     def find(self, node):
         if self.parents[node] != node:
-            self.parents[node] = self.find(self.parents[node])  # path compression
+            self.parents[node] = self.find(self.parents[node])
         return self.parents[node]
 
     def union(self, node1, node2):
@@ -40,16 +40,13 @@ class maze_node:
     def add_neighbour(self, neighbour):
         self.neighbours.append(neighbour)
 
-
 class maze_edges:
     def __init__(self, cell_1: maze_node, cell_2: maze_node):
         self.cell_1 = cell_1
         self.cell_2 = cell_2
 
-
 class maze_graph:
     def __init__(self):
-        # each node uses a hash of its position as a key
         self.nodes = {}
         self.edges = {}
 
@@ -101,22 +98,14 @@ class maze_graph:
         start_node.visited = True
         walls = set(tuple(sorted([start_node, neighbour])) for neighbour in self.get_neighbours(start_node))
         while walls:
-            wall = random.choice(list(walls))  # Convert set to list for random choice
+            wall = random.choice(list(walls)) 
             walls.remove(wall)
             node1, node2 = wall
             
-            # Check if only one of the two cells (node1 and node2) is visited
             if node1.visited != node2.visited:
-                # Identify the unvisited node
                 unvisited_node = node2 if node1.visited else node1
-                
-                # Mark the unvisited node as visited
                 unvisited_node.visited = True
-                
-                # Add the edge between node1 and node2
                 self.edges[hash((node1, node2))] = maze_edges(node1, node2)
-                
-                # Add the neighboring walls of the unvisited node to the walls set
                 for neighbour in self.get_unvisited_neighbours(unvisited_node):
                     walls.add(tuple(sorted([unvisited_node, neighbour])))
 
@@ -135,7 +124,6 @@ class maze_graph:
         current_node = start_node
         current_node.visited = True
         while True:
-            # Kill Phase
             if self.get_unvisited_neighbours(current_node):
                 neighbour = self.get_random_unvisited_neighbour(current_node)
                 neighbour.visited = True
@@ -143,16 +131,14 @@ class maze_graph:
                     current_node, neighbour
                 )
                 current_node = neighbour
-            # Hunt Phase
             else:
-                found = False  # A flag to check if we've found a node during the Hunt phase
+                found = False 
                 for node in self.nodes.values():
                     if not node.visited:
                         visited_neighbours = [n for n in self.get_neighbours(node) if n.visited]
                         if visited_neighbours:
                             current_node = node
                             current_node.visited = True
-                            # Connect to a randomly chosen visited neighbor
                             chosen_neighbour = random.choice(visited_neighbours)
                             self.edges[hash((current_node, chosen_neighbour))] = maze_edges(
                                 current_node, chosen_neighbour
@@ -161,10 +147,6 @@ class maze_graph:
                             break
                 if not found:
                     break
-
-
-
-
 
 def get_2d_maze_graph(width: int, height: int) -> maze_graph:
     graph = maze_graph()
@@ -209,15 +191,13 @@ def get_3d_maze_graph(width: int, height: int, depth: int) -> maze_graph:
                     node.add_neighbour(graph.nodes[hash((x, y, z + 1))])
     return graph
 
-
 class MazeGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
-        description="Generates a 2D maze with 2x2 cells, ensuring no diagonal walls",
-        author="ChatGPT",
+        description="Generates a maze",
+        author="Nano_",
         category="Structure",
     )
     def maze_to_world_position(maze_position: tuple, cell_size: dict = { "width": 2, "height": 2, "depth": 2 }) -> tuple:
-        # the times 2 is because for each cell there is a wall, so the cell size is doubled
         return (
             maze_position[0] * cell_size["width"] * 2,
             maze_position[1] * cell_size["height"] * 2,
@@ -298,16 +278,8 @@ class MazeGenerator(BaseGenerator):
                 "hunt_and_kill"
             ],
         ),
-        hello_there: int = IntInput(
-            min_value=0,
-            max_value=1000000,
-            description="A random int input",
-            default=12,
-        ),
     ) -> mcschematic.MCSchematic:
         
-
-
         graph = get_3d_maze_graph(
             maze_dimensions["width"],
             maze_dimensions["height"],
@@ -341,15 +313,11 @@ class MazeGenerator(BaseGenerator):
         ):
             maze.setBlock(point, wall_block)
 
-
-
         cell_size_over_2 = (
             math.floor(cell_size["width"] / 2),
             math.floor(cell_size["height"] / 2),
             math.floor(cell_size["depth"] / 2),
         )
-
-        print(cell_size_over_2)
 
         for edge in graph.edges.values():
             for point in bresenham_line_3d(
@@ -369,5 +337,4 @@ class MazeGenerator(BaseGenerator):
                     ),
                 ):
                     maze.setBlock(sub_point, path_block)
-
         return maze

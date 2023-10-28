@@ -8,7 +8,7 @@ import os
 import json
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from schematicGenerator.base_generator import BaseGenerator
+from schematic_generator.base_generator import BaseGenerator
 import mcschematic
 import asyncio
 from multiprocessing import Queue

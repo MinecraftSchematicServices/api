@@ -1,11 +1,11 @@
 import math
-from schematicGenerator.inputs import IntInput, BoolInput, BlockInput, ArrayInput
-from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
+from schematic_generator.inputs import IntInput, BoolInput, BlockInput, ArrayInput
+from schematic_generator.base_generator import BaseGenerator, GeneratorMetaData
 import mcschematic
-from schematicGenerator.block_palettes import *
+from schematic_generator.block_palettes import *
 import random
 import math
-from schematicGenerator.utils import bresenham_line_2d
+from schematic_generator.utils import bresenham_line_2d
 
 class PolygonGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(

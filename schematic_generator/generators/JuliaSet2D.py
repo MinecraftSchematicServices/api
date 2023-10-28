@@ -1,25 +1,22 @@
 import math
-from schematicGenerator.inputs import (
+from schematic_generator.inputs import (
     IntInput,
     BoolInput,
     BlockInput,
     ComplexInput,
     ArrayInput,
 )
-from schematicGenerator.base_generator import BaseGenerator, GeneratorMetaData
+from schematic_generator.base_generator import BaseGenerator, GeneratorMetaData
 import mcschematic
 import numpy as np
-from schematicGenerator.block_palettes import *
-
-
+from schematic_generator.block_palettes import *
 class JuliaSetGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
         description="Generates a Julia Set fractal",
-        author="Assistant",
+        author="Nano ",
         category="Fractal",
         tags=["julia", "fractal"],
     )
-
     @classmethod
     def generate(
         cls,
@@ -53,13 +50,9 @@ class JuliaSetGenerator(BaseGenerator):
         ),
     ) -> mcschematic.MCSchematic:
         schem = mcschematic.MCSchematic()
-
-        # Define the x and y ranges to visualize
         x = np.linspace(-2, 2, width)
         y = np.linspace(-2, 2, height)
-
         output = np.zeros((width, height))
-
         for x_idx, x_val in enumerate(x):
             for y_idx, y_val in enumerate(y):
                 z = complex(x_val, y_val)
@@ -70,16 +63,11 @@ class JuliaSetGenerator(BaseGenerator):
                     z = z * z + set_position
                     count += 1
                 output[x_idx, y_idx] = count
-
         num_colors = len(blocks)
         color_step = iterations / num_colors
-
         for x_idx in range(width):
             for y_idx in range(height):
                 color_idx = int(output[x_idx, y_idx] / color_step)
-                color_idx = min(
-                    color_idx, num_colors - 1
-                )  # Ensure the index is within the range
+                color_idx = min(color_idx, num_colors - 1)
                 schem.setBlock((x_idx, 0, y_idx), blocks[color_idx])
-
         return schem
