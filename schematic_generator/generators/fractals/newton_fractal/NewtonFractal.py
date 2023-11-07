@@ -1,34 +1,28 @@
 import math
+import os
+from math import log
+import mcschematic
+import numpy as np
+import sympy as sp
 from schematic_generator.inputs import (
     IntInput,
-    BoolInput,
     BlockInput,
-    ComplexInput,
     ArrayInput,
 )
 from schematic_generator.base_generator import BaseGenerator, GeneratorMetaData
-import mcschematic
-import numpy as np
 from schematic_generator.block_palettes import *
-class JuliaSetGenerator(BaseGenerator):
+
+class NewtonFractalGenerator(BaseGenerator):
     meta_data = GeneratorMetaData(
-        description="Generates a Julia Set fractal",
-        author="Nano ",
+        description= open(os.path.dirname(os.path.realpath(__file__)) + "/description.md", "r").read(),
+        author="User",
         category="Fractal",
-        tags=["julia", "fractal"],
+        tags=["newton", "fractal"],
     )
+
     @classmethod
     def generate(
         cls,
-        set_position: tuple = ComplexInput(
-            real_low_bound=-2,
-            real_high_bound=2,
-            imag_low_bound=-2,
-            imag_high_bound=2,
-            real_default=-0.7,
-            imag_default=0.27015,
-            description="Complex constant c for the Julia Set",
-        ),
         iterations: int = IntInput(
             min_value=1, max_value=1000, description="Number of iterations", default=30
         ),
@@ -49,25 +43,37 @@ class JuliaSetGenerator(BaseGenerator):
             max_length=16,
         ),
     ) -> mcschematic.MCSchematic:
+        z = sp.symbols('z')
+        fx_str = "z**3 - 1"
+        fx = sp.sympify(fx_str)
+        d_fx = sp.diff(fx, z)
+        d_fx_str = str(d_fx)
+        print(fx_str, d_fx_str)
         schem = mcschematic.MCSchematic()
         x = np.linspace(-2, 2, width)
         y = np.linspace(-2, 2, height)
-        output = np.zeros((width, height))
+        output = np.zeros((width, height), dtype=int)
+        roots = [complex(1, 0), complex(-0.5, math.sqrt(3)/2), complex(-0.5, -math.sqrt(3)/2)]  # Roots of z**3 - 1
         for x_idx, x_val in enumerate(x):
             for y_idx, y_val in enumerate(y):
                 z = complex(x_val, y_val)
-                count = 0
-                for _ in range(iterations):
-                    if abs(z) > 2:
+                for i in range(iterations):
+                    try:
+                        z -= eval(fx_str) / eval(d_fx_str)
+                    except ZeroDivisionError:
                         break
-                    z = z * z + set_position
-                    count += 1
-                output[x_idx, y_idx] = count
+                    for root_idx, root in enumerate(roots):
+                        if abs(z - root) < 0.01:
+                            output[x_idx, y_idx] = root_idx + 1
+                            break
+                    if output[x_idx, y_idx] > 0:
+                        break
         num_colors = len(blocks)
-        color_step = iterations / num_colors
+        print(output)
         for x_idx in range(width):
             for y_idx in range(height):
-                color_idx = int(output[x_idx, y_idx] / color_step)
-                color_idx = min(color_idx, num_colors - 1)
-                schem.setBlock((x_idx, 0, y_idx), blocks[color_idx])
+                color_idx = output[x_idx, y_idx] - 1
+                if color_idx >= 0:
+                    schem.setBlock((x_idx, 0, y_idx), blocks[color_idx])
+        print("done")
         return schem

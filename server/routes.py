@@ -38,7 +38,7 @@ async def generate(request, generator_name):
         
         try:
             # Try to get the result within the timeout
-            schem = future.result(timeout=1)  # replace X with your desired timeout in seconds
+            schem = future.result(timeout=20)
 
             if isinstance(schem, Exception):
                 raise schem

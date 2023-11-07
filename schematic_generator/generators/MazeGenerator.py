@@ -229,6 +229,7 @@ class MazeGenerator(BaseGenerator):
                 ),
             },
             description="Size of each cell in the maze",
+            default={"width": 10, "height": 1, "depth": 10},
         ),
         cell_size: dict = InputGroup(
             inputs={
@@ -252,6 +253,7 @@ class MazeGenerator(BaseGenerator):
                 ),
             },
             description="Size of each cell in the maze",
+            default={"width": 1, "height": 1, "depth": 1},
         ),
         wall_block: str = BlockInput(
             default="minecraft:black_concrete",
@@ -278,8 +280,14 @@ class MazeGenerator(BaseGenerator):
                 "hunt_and_kill"
             ],
         ),
+        seed: int = IntInput(
+            min_value=0,
+            max_value=1000000,
+            description="Seed for the maze generation",
+            default=random.randint(0, 1000000),
+        ),
     ) -> mcschematic.MCSchematic:
-        
+        random.seed(seed)
         graph = get_3d_maze_graph(
             maze_dimensions["width"],
             maze_dimensions["height"],
